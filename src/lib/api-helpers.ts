@@ -74,9 +74,8 @@ export interface AIResponse {
   error?: string;
 }
 
-/**
- * Analyze CSS code for baseline compatibility
- */
+// Analyze CSS code for baseline compatibility
+
 export async function analyzeCSS(css: string): Promise<AnalysisResponse> {
   try {
     const response = await fetch('/api/analyze', {
@@ -101,9 +100,7 @@ export async function analyzeCSS(css: string): Promise<AnalysisResponse> {
   }
 }
 
-/**
- * Ask the AI assistant a question
- */
+// Ask the AI assistant a question
 export async function askAIAssistant(
   message: string,
   context?: {
@@ -141,9 +138,7 @@ export async function askAIAssistant(
   }
 }
 
-/**
- * Example prompts for the AI assistant
- */
+// Example prompts for the AI assistant
 export const EXAMPLE_PROMPTS = [
   "Why isn't backdrop-filter working in Firefox?",
   "How can I use container queries with a fallback?",

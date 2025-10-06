@@ -1,4 +1,5 @@
 // src/components/AIAssistant.tsx
+
 import React, { useState } from 'react';
 import { Send, Sparkles, X } from 'lucide-react';
 

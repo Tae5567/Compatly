@@ -1,4 +1,5 @@
 //src/app/page.tsx
+//Main App Component
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -52,7 +53,7 @@ const App = () => {
         const pluginData = event.data.data;
         if (pluginData?.cssCode) {
           setCssInput(pluginData.cssCode);
-          // Auto-analyze if we have CSS from plugin
+          // Auto analyze if CSS from plugin
           setTimeout(() => {
             analyzeCSS();
           }, 500);
@@ -531,7 +532,7 @@ const App = () => {
         )}
       </main>
 
-      {/* AI Assistant - Only show when analysis is available */}
+      {/* AI Assistant to only show when analysis is available/done */}
       {analysis && <AIAssistant analysisContext={aiContext} />}
     </div>
   );

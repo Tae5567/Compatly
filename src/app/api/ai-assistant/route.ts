@@ -1,4 +1,5 @@
 // app/api/ai-assistant/route.ts
+
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from "@google/genai";
 
@@ -27,7 +28,6 @@ export async function POST(request: NextRequest) {
     const systemPrompt = buildSystemPrompt(context);
     const fullPrompt = `${systemPrompt}\n\nUser question: ${message}`;
 
-    // Fixed: Use the correct API structure
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: fullPrompt,
