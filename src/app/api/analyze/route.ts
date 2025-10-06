@@ -1,13 +1,13 @@
-// app/api/analyze/route.ts
+// src/app/api/analyze/route.ts
 // API endpoint for CSS analysis
 
 import { NextRequest, NextResponse } from 'next/server';
-import { CSSParser, BaselineChecker, generateReport, AnalysisResult } from '@/lib/css-parser';
+import { BASELINE_FEATURES, BaselineFeature } from '@/lib/baseline-data';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { css, options } = body;
+    const { css } = body;
 
     if (!css || typeof css !== 'string') {
       return NextResponse.json(
@@ -16,28 +16,63 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const parser = new CSSParser(css);
-    const parsedCSS = parser.parse();
+    // Parse CSS and detect features
+    const detectedFeatures = detectCSSFeatures(css);
 
-    const checker = new BaselineChecker();
-    const analysis = checker.analyzeCSS(parsedCSS);
+    // Categorize features
+    const compatible: any[] = [];
+    const warnings: any[] = [];
+    const incompatible: any[] = [];
 
-    const report = generateReport(parsedCSS, analysis);
-    const browserScores = calculateBrowserScores(analysis);
+    detectedFeatures.forEach(detected => {
+      const item = {
+        cssProperty: detected.property,
+        feature: detected.feature,
+        context: detected.context
+      };
+
+      if (detected.feature.status === 'widely-available') {
+        compatible.push(item);
+      } else if (detected.feature.status === 'newly-available' || detected.feature.status === 'limited') {
+        warnings.push(item);
+      } else {
+        incompatible.push(item);
+      }
+    });
+
+    // Calculate score
+    const totalFeatures = detectedFeatures.length || 1;
+    const weights = {
+      'widely-available': 1,
+      'newly-available': 0.7,
+      'limited': 0.3,
+      'not-available': 0
+    };
+
+    const totalWeight = detectedFeatures.reduce((sum, f) => {
+      return sum + (weights[f.feature.status as keyof typeof weights] || 0);
+    }, 0);
+
+    const score = Math.round((totalWeight / totalFeatures) * 100);
+
+    // Calculate browser scores
+    const browserScores = calculateBrowserScores(detectedFeatures);
 
     return NextResponse.json({
       success: true,
       data: {
-        parsedCSS,
-        analysis,
-        report,
-        browserScores,
-        timestamp: new Date().toISOString()
+        analysis: {
+          compatible,
+          warnings,
+          incompatible,
+          score
+        },
+        browserScores
       }
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Analysis failed';
-    console.error('Analysis error:', error);
+    console.error('CSS analysis error:', error);
     return NextResponse.json(
       { error: errorMessage },
       { status: 500 }
@@ -45,22 +80,126 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function calculateBrowserScores(analysis: AnalysisResult): Record<string, number> {
-  const browsers = ['chrome', 'firefox', 'safari', 'edge'] as const;
+interface DetectedFeature {
+  property: string;
+  feature: BaselineFeature;
+  context: string;
+}
+
+function detectCSSFeatures(css: string): DetectedFeature[] {
+  const features: DetectedFeature[] = [];
+  const lines = css.toLowerCase().split('\n');
+
+  // Detection patterns for each feature
+  const patterns = [
+    {
+      regex: /display:\s*flex/,
+      key: 'flexbox',
+      context: 'Flexbox layout detected'
+    },
+    {
+      regex: /display:\s*grid/,
+      key: 'grid',
+      context: 'CSS Grid layout detected'
+    },
+    {
+      regex: /\bgap:/,
+      key: 'gap',
+      context: 'Gap property used'
+    },
+    {
+      regex: /grid-template-columns:\s*subgrid/,
+      key: 'subgrid',
+      context: 'CSS Subgrid detected'
+    },
+    {
+      regex: /@container/,
+      key: 'container-queries',
+      context: 'Container query detected'
+    },
+    {
+      regex: /:has\(/,
+      key: 'has-selector',
+      context: ':has() selector used'
+    },
+    {
+      regex: /&\s*\{/,
+      key: 'nesting',
+      context: 'CSS nesting detected'
+    },
+    {
+      regex: /backdrop-filter:/,
+      key: 'backdrop-filter',
+      context: 'Backdrop filter applied'
+    },
+    {
+      regex: /aspect-ratio:/,
+      key: 'aspect-ratio',
+      context: 'Aspect ratio property used'
+    },
+    {
+      regex: /@layer/,
+      key: 'cascade-layers',
+      context: 'Cascade layer detected'
+    },
+    {
+      regex: /color-mix\(/,
+      key: 'color-mix',
+      context: 'color-mix() function used'
+    },
+    {
+      regex: /scroll-snap-type:/,
+      key: 'scroll-snap',
+      context: 'Scroll snap detected'
+    },
+    {
+      regex: /(margin-inline|padding-block|margin-block|padding-inline):/,
+      key: 'logical-properties',
+      context: 'Logical properties used'
+    },
+    {
+      regex: /view-transition-name:/,
+      key: 'view-transitions',
+      context: 'View transition detected'
+    },
+    {
+      regex: /anchor-name:/,
+      key: 'anchor-positioning',
+      context: 'Anchor positioning used'
+    }
+  ];
+
+  const cssText = lines.join('\n');
+
+  patterns.forEach(pattern => {
+    if (pattern.regex.test(cssText)) {
+      const feature = BASELINE_FEATURES[pattern.key];
+      if (feature) {
+        features.push({
+          property: feature.cssProperty,
+          feature: feature,
+          context: pattern.context
+        });
+      }
+    }
+  });
+
+  // Remove duplicates
+  return features.filter((feature, index, self) =>
+    index === self.findIndex(f => f.property === feature.property)
+  );
+}
+
+function calculateBrowserScores(features: DetectedFeature[]): Record<string, number> {
+  const browsers = ['chrome', 'firefox', 'safari', 'edge'];
   const scores: Record<string, number> = {};
 
   browsers.forEach(browser => {
-    let supported = 0;
-    let total = 0;
-
-    [...analysis.compatible, ...analysis.warnings, ...analysis.incompatible].forEach(result => {
-      total++;
-      if (result.feature.browserSupport[browser]) {
-        supported++;
-      }
+    const supportedFeatures = features.filter(f => {
+      const version = f.feature.browserSupport[browser as keyof typeof f.feature.browserSupport];
+      return version && version !== 'Not supported';
     });
-
-    scores[browser] = total > 0 ? Math.round((supported / total) * 100) : 100;
+    scores[browser] = supportedFeatures.length;
   });
 
   return scores;

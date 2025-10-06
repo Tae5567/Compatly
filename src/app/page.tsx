@@ -1,5 +1,4 @@
 //src/app/page.tsx
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -50,8 +49,14 @@ const App = () => {
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.data?.type === 'figma-plugin-data') {
-        setCssInput(event.data.data?.cssCode || '');
-        setActiveTab('input');
+        const pluginData = event.data.data;
+        if (pluginData?.cssCode) {
+          setCssInput(pluginData.cssCode);
+          // Auto-analyze if we have CSS from plugin
+          setTimeout(() => {
+            analyzeCSS();
+          }, 500);
+        }
       }
     };
     window.addEventListener('message', handleMessage);
