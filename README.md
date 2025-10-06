@@ -194,7 +194,7 @@ Detects **all CSS properties** used in your code and validates against Baseline 
 
 ### Data Source
 
-Compatly uses **official Baseline data** from [web-features.fyi](https://web-features.fyi), which aggregates compatibility information from:
+Compatly uses **official Baseline data**  which aggregates compatibility information from:
 - MDN Browser Compatibility Data
 - W3C Standards
 - Can I Use database
