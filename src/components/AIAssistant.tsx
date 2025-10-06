@@ -1,7 +1,6 @@
-//src/components/AIAssistant.tsx
-
+// src/components/AIAssistant.tsx
 import React, { useState } from 'react';
-import { MessageCircle, Send, Sparkles, X } from 'lucide-react';
+import { Send, Sparkles, X } from 'lucide-react';
 
 // Define types for messages and context
 interface Message {

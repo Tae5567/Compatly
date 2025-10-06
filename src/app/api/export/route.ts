@@ -1,94 +1,72 @@
-// src/app/api/export/route.ts
+//src/app/api/export/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function POST_Export(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { format, data } = body;
+interface ExportData {
+  timestamp: string;
+  score: number;
+  features: Array<{
+    name: string;
+    status: string;
+    cssProperty: string;
+  }>;
+  browserScores: {
+    chrome: number;
+    firefox: number;
+    safari: number;
+    edge: number;
+  };
+}
 
-    if (!['json', 'pdf', 'markdown'].includes(format)) {
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json() as ExportData;
+    
+    // Validate the data structure
+    if (!body.features || !Array.isArray(body.features)) {
       return NextResponse.json(
-        { error: 'Invalid format' },
+        { error: 'Invalid export data' },
         { status: 400 }
       );
     }
 
-    let exportData: string;
-    let contentType: string;
-    let filename: string;
+    // Generate export report
+    const report = {
+      generatedAt: new Date().toISOString(),
+      compatibilityScore: body.score,
+      features: body.features,
+      browserSupport: body.browserScores,
+      summary: generateSummary(body)
+    };
 
-    switch (format) {
-      case 'json':
-        exportData = JSON.stringify(data, null, 2);
-        contentType = 'application/json';
-        filename = `baseline-report-${Date.now()}.json`;
-        break;
-      
-      case 'markdown':
-        exportData = generateMarkdownReport(data);
-        contentType = 'text/markdown';
-        filename = `baseline-report-${Date.now()}.md`;
-        break;
-      
-      case 'pdf':
-        exportData = generateMarkdownReport(data);
-        contentType = 'application/pdf';
-        filename = `baseline-report-${Date.now()}.pdf`;
-        break;
-      
-      default:
-        throw new Error('Unsupported format');
-    }
-
-    return new NextResponse(exportData, {
-      headers: {
-        'Content-Type': contentType,
-        'Content-Disposition': `attachment; filename="${filename}"`
-      }
+    return NextResponse.json({
+      success: true,
+      data: report
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Export error:', error);
     return NextResponse.json(
-      { error: errorMessage },
+      { error: 'Export failed' },
       { status: 500 }
     );
   }
 }
 
-function generateMarkdownReport(data: any): string {
-  return `
-# CSS Baseline Compatibility Report
+function generateSummary(data: ExportData): {
+  totalFeatures: number;
+  widelyAvailable: number;
+  newlyAvailable: number;
+  limited: number;
+} {
+  const statusCounts = data.features.reduce((acc, feature) => {
+    const status = feature.status || 'unknown';
+    acc[status] = (acc[status] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
 
-**Generated**: ${new Date().toISOString()}
-**Score**: ${data.analysis?.score || 0}/100
-
-## Summary
-
-- Total Features: ${data.parsedCSS?.features?.length || 0}
-- Compatible: ${data.analysis?.compatible?.length || 0}
-- Warnings: ${data.analysis?.warnings?.length || 0}
-- Incompatible: ${data.analysis?.incompatible?.length || 0}
-
-## Browser Support
-
-| Browser | Support Score |
-|---------|---------------|
-| Chrome  | ${data.browserScores?.chrome || 0}% |
-| Firefox | ${data.browserScores?.firefox || 0}% |
-| Safari  | ${data.browserScores?.safari || 0}% |
-| Edge    | ${data.browserScores?.edge || 0}% |
-
-## Detected Features
-
-${data.parsedCSS?.features?.map((f: any) => 
-  `- **${f.property}**: ${f.value} (${f.category})`
-).join('\n') || 'No features detected'}
-
-## Recommendations
-
-${data.analysis?.warnings?.length > 0 ? 
-  'Some features have limited browser support. Consider providing fallbacks.' : 
-  'All features are widely supported!'}
-  `.trim();
+  return {
+    totalFeatures: data.features.length,
+    widelyAvailable: statusCounts['widely-available'] || 0,
+    newlyAvailable: statusCounts['newly-available'] || 0,
+    limited: statusCounts['limited'] || 0
+  };
 }

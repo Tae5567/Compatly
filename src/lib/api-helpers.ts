@@ -1,4 +1,4 @@
-// src/lib/api-helpers.ts
+// lib/api-helpers.ts
 // Helper functions for API calls
 
 export interface AnalysisResponse {
@@ -106,7 +106,14 @@ export async function analyzeCSS(css: string): Promise<AnalysisResponse> {
  */
 export async function askAIAssistant(
   message: string,
-  context?: any
+  context?: {
+    analysis?: {
+      compatible?: Array<{ feature: { name: string; description?: string } }>;
+      warnings?: Array<{ feature: { name: string; description?: string } }>;
+      incompatible?: Array<{ feature: { name: string; description?: string } }>;
+      score?: number;
+    };
+  }
 ): Promise<string> {
   try {
     const response = await fetch('/api/ai-assistant', {

@@ -20,9 +20,15 @@ export async function POST(request: NextRequest) {
     const detectedFeatures = detectCSSFeatures(css);
 
     // Categorize features
-    const compatible: any[] = [];
-    const warnings: any[] = [];
-    const incompatible: any[] = [];
+    interface AnalysisItem {
+      cssProperty: string;
+      feature: BaselineFeature;
+      context: string;
+    }
+    
+    const compatible: AnalysisItem[] = [];
+    const warnings: AnalysisItem[] = [];
+    const incompatible: AnalysisItem[] = [];
 
     detectedFeatures.forEach(detected => {
       const item = {

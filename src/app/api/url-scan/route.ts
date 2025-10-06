@@ -1,8 +1,7 @@
 // src/app/api/url-scan/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { CSSParser, BaselineChecker, generateReport, AnalysisResult } from '@/lib/css-parser';
 
-export async function POST_URLScan(request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { url } = body;
@@ -27,19 +26,23 @@ export async function POST_URLScan(request: NextRequest) {
     const html = await response.text();
     const css = extractCSSFromPage(html);
 
-    const parser = new CSSParser(css);
-    const parsedCSS = parser.parse();
-    
-    const checker = new BaselineChecker();
-    const analysis = checker.analyzeCSS(parsedCSS);
+    // Use the analyze endpoint
+    const analyzeResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/analyze`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ css })
+    });
+
+    const analysisResult = await analyzeResponse.json();
 
     return NextResponse.json({
       success: true,
       data: {
         url,
         css,
-        parsedCSS,
-        analysis,
+        ...analysisResult.data,
         scannedAt: new Date().toISOString()
       }
     });
