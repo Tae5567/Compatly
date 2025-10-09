@@ -5,7 +5,7 @@ import { features as webFeatures } from 'web-features';
 export type BaselineStatus = 'widely-available' | 'newly-available' | 'limited' | 'not-available';
 
 export interface BaselineFeature {
-  name: string;
+  name: string; 
   cssProperty: string;
   status: BaselineStatus;
   availableSince?: string;
