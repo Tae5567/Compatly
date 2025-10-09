@@ -1,7 +1,8 @@
 // src/lib/css-parser.ts
 // Using same baseline data from Figma plugin
 
-import type { BaselineFeature, BaselineStatus } from '@/lib/baseline-data';
+import type { BaselineFeature, BaselineStatus } from '@/lib/web-features-adapter';
+import { BASELINE_FEATURES } from '@/lib/web-features-adapter';
 
 export interface ParsedCSSFeature {
   property: string;

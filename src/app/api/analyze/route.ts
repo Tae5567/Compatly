@@ -2,7 +2,8 @@
 // API endpoint for CSS analysis
 
 import { NextRequest, NextResponse } from 'next/server';
-import { BASELINE_FEATURES, BaselineFeature } from '@/lib/baseline-data';
+import { BASELINE_FEATURES, CSS_TO_FEATURE_MAP, BaselineFeature } from '@/lib/web-features-adapter';
+
 
 export async function POST(request: NextRequest) {
   try {
@@ -96,83 +97,27 @@ function detectCSSFeatures(css: string): DetectedFeature[] {
   const features: DetectedFeature[] = [];
   const lines = css.toLowerCase().split('\n');
 
-  // Detection patterns for each feature
+  // Enhanced detection patterns using the full web-features dataset
   const patterns = [
-    {
-      regex: /display:\s*flex/,
-      key: 'flexbox',
-      context: 'Flexbox layout detected'
-    },
-    {
-      regex: /display:\s*grid/,
-      key: 'grid',
-      context: 'CSS Grid layout detected'
-    },
-    {
-      regex: /\bgap:/,
-      key: 'gap',
-      context: 'Gap property used'
-    },
-    {
-      regex: /grid-template-columns:\s*subgrid/,
-      key: 'subgrid',
-      context: 'CSS Subgrid detected'
-    },
-    {
-      regex: /@container/,
-      key: 'container-queries',
-      context: 'Container query detected'
-    },
-    {
-      regex: /:has\(/,
-      key: 'has-selector',
-      context: ':has() selector used'
-    },
-    {
-      regex: /&\s*\{/,
-      key: 'nesting',
-      context: 'CSS nesting detected'
-    },
-    {
-      regex: /backdrop-filter:/,
-      key: 'backdrop-filter',
-      context: 'Backdrop filter applied'
-    },
-    {
-      regex: /aspect-ratio:/,
-      key: 'aspect-ratio',
-      context: 'Aspect ratio property used'
-    },
-    {
-      regex: /@layer/,
-      key: 'cascade-layers',
-      context: 'Cascade layer detected'
-    },
-    {
-      regex: /color-mix\(/,
-      key: 'color-mix',
-      context: 'color-mix() function used'
-    },
-    {
-      regex: /scroll-snap-type:/,
-      key: 'scroll-snap',
-      context: 'Scroll snap detected'
-    },
-    {
-      regex: /(margin-inline|padding-block|margin-block|padding-inline):/,
-      key: 'logical-properties',
-      context: 'Logical properties used'
-    },
-    {
-      regex: /view-transition-name:/,
-      key: 'view-transitions',
-      context: 'View transition detected'
-    },
-    {
-      regex: /anchor-name:/,
-      key: 'anchor-positioning',
-      context: 'Anchor positioning used'
-    }
+    { regex: /display:\s*flex/, key: 'flexbox', context: 'Flexbox layout detected' },
+    { regex: /display:\s*grid/, key: 'grid', context: 'CSS Grid layout detected' },
+    { regex: /\bgap:/, key: 'gap', context: 'Gap property used' },
+    { regex: /grid-template-(columns|rows):\s*subgrid/, key: 'subgrid', context: 'CSS Subgrid detected' },
+    { regex: /@container/, key: 'container-queries', context: 'Container query detected' },
+    { regex: /:has\(/, key: 'has', context: ':has() selector used' },
+    { regex: /&\s*\{/, key: 'nesting', context: 'CSS nesting detected' },
+    { regex: /backdrop-filter:/, key: 'backdrop-filter', context: 'Backdrop filter applied' },
+    { regex: /aspect-ratio:/, key: 'aspect-ratio', context: 'Aspect ratio property used' },
+    { regex: /@layer/, key: 'cascade-layers', context: 'Cascade layer detected' },
+    { regex: /color-mix\(/, key: 'color-mix', context: 'color-mix() function used' },
+    { regex: /scroll-snap-type:/, key: 'css-scroll-snap', context: 'Scroll snap detected' },
+    { regex: /(margin-inline|padding-block|margin-block|padding-inline):/, key: 'logical-properties', context: 'Logical properties used' },
+    { regex: /view-transition-name:/, key: 'view-transitions-api', context: 'View transition detected' },
+    { regex: /anchor-name:/, key: 'css-anchor-positioning', context: 'Anchor positioning used' },
+    { regex: /@scope/, key: 'css-cascade-scope', context: 'CSS @scope detected' },
+    { regex: /@property/, key: 'at-property', context: '@property detected' },
+    { regex: /text-wrap:\s*balance/, key: 'text-wrap-balance', context: 'Text wrap balance used' },
+    { regex: /text-wrap:\s*pretty/, key: 'text-wrap-pretty', context: 'Text wrap pretty used' },
   ];
 
   const cssText = lines.join('\n');
@@ -190,7 +135,6 @@ function detectCSSFeatures(css: string): DetectedFeature[] {
     }
   });
 
-  // Remove duplicates
   return features.filter((feature, index, self) =>
     index === self.findIndex(f => f.property === feature.property)
   );
